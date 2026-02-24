@@ -14,7 +14,7 @@ A lightweight, web-based recreation of the electronic "Trading Unit" from the Mo
 * HTML5
 * CSS3
 * Vanilla JavaScript (No external libraries or frameworks required)
-* littebit ai
+* Litte bit Ai
 
 ## How to Use
 
