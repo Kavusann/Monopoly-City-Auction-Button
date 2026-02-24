@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trading Unit & Auction Timer</title>
+    <style>
+        body { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            font-family: Arial, sans-serif; 
+            background-color: #2c3e50; 
+            margin: 0;
+            padding: 15px; 
+            box-sizing: border-box;
+            color: white;
+            transition: background-color 0.2s; 
+        }
+        
+        /* Layout container for mobile responsiveness */
+        .game-area {
+            display: flex;
+            flex-direction: column; 
+            gap: 20px; 
+            width: 100%;
+            max-width: 400px; 
+        }
+
+        .section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #34495e;
+            padding: 25px 20px; 
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 24px;
+            color: #ecf0f1;
+        }
+
+        /* Common display style for dice and timer */
+        .display-box { 
+            font-size: 60px; 
+            width: 100%; 
+            max-width: 200px;
+            height: 130px; 
+            background-color: #ecf0f1; 
+            color: #2c3e50;
+            border: 6px solid #1abc9c; 
+            border-radius: 25px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            margin-bottom: 20px; 
+            font-weight: bold;
+            box-shadow: inset 0 5px 10px rgba(0,0,0,0.1); 
+        }
+
+        #dice-box { border-color: #e74c3c; }
+        #timer-box { border-color: #f1c40f; }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px; 
+            width: 100%;
+        }
+
+        button { 
+            font-size: 20px; 
+            font-weight: bold;
+            padding: 15px; 
+            cursor: pointer; 
+            color: white; 
+            border: none; 
+            border-radius: 12px; 
+            transition: all 0.1s;
+            width: 100%; 
+        }
+
+        .btn-roll { background-color: #e74c3c; box-shadow: 0 6px 0 #c0392b; }
+        .btn-roll:active { box-shadow: 0 2px 0 #c0392b; transform: translateY(4px); }
+
+        .btn-start { background-color: #f1c40f; color: #2c3e50; box-shadow: 0 6px 0 #f39c12; }
+        .btn-start:active { box-shadow: 0 2px 0 #f39c12; transform: translateY(4px); }
+
+        .btn-stop { background-color: #9b59b6; box-shadow: 0 6px 0 #8e44ad; }
+        .btn-stop:active { box-shadow: 0 2px 0 #8e44ad; transform: translateY(4px); }
+
+        button:disabled {
+            background-color: #95a5a6;
+            color: #ecf0f1;
+            box-shadow: 0 6px 0 #7f8c8d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Flashing red animation for timer end */
+        @keyframes redFlash {
+            0% { background-color: #2c3e50; }
+            50% { background-color: #c0392b; } 
+            100% { background-color: #2c3e50; }
+        }
+
+        .alarm-active {
+            animation: redFlash 0.4s infinite; 
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="game-area">
+        
+        <div class="section">
+            <h2>Building Dice</h2>
+            <div id="dice-box" class="display-box">?</div>
+            <button class="btn-roll" id="btnRoll" onclick="rollDice()">Roll!</button>
+        </div>
+
+        <div class="section">
+            <h2>Auction Timer</h2>
+            <div id="timer-box" class="display-box">0</div>
+            
+            <div class="button-group">
+                <button class="btn-start" id="btnStart" onclick="startTimer()">Start Timer!</button>
+                <button class="btn-stop" id="btnStop" onclick="stopTimer()" disabled>Stop Timer</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- INITIALIZE AUDIO ---
+        const alarmSound = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+        alarmSound.loop = true;
+
+        // --- DICE LOGIC ---
+        function rollDice() {
+            const diceBox = document.getElementById('dice-box');
+            const btnRoll = document.getElementById('btnRoll');
+            const options = [1, 2, 3, "Train"];
+            
+            btnRoll.disabled = true; 
+            let ticks = 0;
+            
+            const spinEffect = setInterval(() => {
+                const randomIndex = Math.floor(Math.random() * options.length);
+                diceBox.innerText = options[randomIndex];
+                ticks++;
+                
+                // Stop spinning after a short duration
+                if (ticks > 20) { 
+                    clearInterval(spinEffect); 
+                    const finalIndex = Math.floor(Math.random() * options.length);
+                    diceBox.innerText = options[finalIndex];
+                    btnRoll.disabled = false; 
+                }
+            }, 50); 
+        }
+
+        // --- AUCTION TIMER LOGIC ---
+        let timerInterval; 
+
+        function startTimer() {
+            // Audio permission workaround for iOS
+            alarmSound.play().then(() => {
+                alarmSound.pause();
+                alarmSound.currentTime = 0;
+            }).catch(e => console.log("Waiting for audio interaction..."));
+
+            const timerBox = document.getElementById('timer-box');
+            const btnStart = document.getElementById('btnStart');
+            const btnStop = document.getElementById('btnStop');
+
+            btnStart.disabled = true;
+            btnStop.disabled = false;
+
+            // Generate a random time between 10 and 60 seconds
+            let timeLeft = Math.floor(Math.random() * 51) + 10;
+            timerBox.innerText = timeLeft;
+
+            clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                timeLeft--; 
+                timerBox.innerText = timeLeft; 
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval); 
+                    timerBox.innerText = "Done!"; 
+                    
+                    // Trigger visual alert
+                    document.body.classList.add('alarm-active');
+                    
+                    // Trigger audio alert
+                    alarmSound.play();
+                    
+                    setTimeout(() => {
+                        alarmSound.pause(); 
+                        alarmSound.currentTime = 0; 
+                        document.body.classList.remove('alarm-active'); 
+                    }, 2000);
+                    
+                    btnStart.disabled = false; 
+                    btnStop.disabled = true;
+                }
+            }, 1000); 
+        }
+
+        function stopTimer() {
+            const btnStart = document.getElementById('btnStart');
+            const btnStop = document.getElementById('btnStop');
+
+            clearInterval(timerInterval);
+
+            btnStart.disabled = false;
+            btnStop.disabled = true;
+        }
+    </script>
+</body>
+</html>
